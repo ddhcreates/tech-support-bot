@@ -390,11 +390,11 @@ function handleTicketFlow(event, userState, messageText) {
 // ==================== CREATE TICKET ====================
 
 function createTicketInSheet(userEmail, userName, ticketData) {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Requests');
-  if (!sheet) throw new Error('Requests sheet not found');
+  // Use service account for Sheet access
+  const data = getSheetDataWithServiceAccount(SHEET_ID, 'Requests');
   
-  const lastRow = sheet.getLastRow();
-  const ticketNumber = (lastRow).toString().padStart(4, '0');
+  const lastRow = data.length;
+  const ticketNumber = lastRow.toString().padStart(4, '0');
   const ticketId = '#' + ticketNumber;
   
   const assignment = getAvailableStaffForToday();
@@ -413,17 +413,17 @@ function createTicketInSheet(userEmail, userName, ticketData) {
   let fullDescription = ticketData.description;
   if (hasPhoto) {
     fullDescription += '\n\n📷 [Photo attached]';
-    // Add attachment reference to Additional Info column
   }
   
   const rowData = [
-    new Date(), ticketId, '', userName, ticketData.ticketTypeName,
+    new Date().toISOString(), ticketId, '', userName, ticketData.ticketTypeName,
     fullDescription, '-', '-', userEmail, '', assignedStaff.name,
     ticketData.location || '-', '-', '-', ticketData.priority || 'Medium',
     hasPhoto ? 'Photo attached: ' + JSON.stringify(ticketData.attachments[0]) : '', '', 'Pending'
   ];
   
-  sheet.appendRow(rowData);
+  // Append row using service account
+  appendRowWithServiceAccount(SHEET_ID, 'Requests', rowData);
   
   // Notifications
   const notificationData = { ...ticketData, hasPhoto };
@@ -546,10 +546,8 @@ function handleStatusCommand(event, userEmail) {
 
 function getUserTickets(userEmail) {
   try {
-    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Requests');
-    if (!sheet) return createTextResponse('No tickets found.');
-    
-    const data = sheet.getDataRange().getValues();
+    // Use service account for Sheet access
+    const data = getSheetDataWithServiceAccount(SHEET_ID, 'Requests');
     const openTickets = [];
     
     for (let i = 1; i < data.length; i++) {
@@ -585,10 +583,8 @@ function getUserTickets(userEmail) {
  */
 function getStaffAssignedTickets(staffEmail) {
   try {
-    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Requests');
-    if (!sheet) return createTextResponse('No tickets found.');
-    
-    const data = sheet.getDataRange().getValues();
+    // Use service account for Sheet access
+    const data = getSheetDataWithServiceAccount(SHEET_ID, 'Requests');
     const staffInfo = SUPPORT_STAFF.find(s => s.email.toLowerCase() === staffEmail.toLowerCase());
     
     // Get staff name - could be full name or partial
@@ -655,8 +651,8 @@ function getStaffAssignedTickets(staffEmail) {
  */
 function addTicketNote(ticketNum, noteText, staffEmail) {
   try {
-    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Requests');
-    const data = sheet.getDataRange().getValues();
+    // Use service account for Sheet access
+    const data = getSheetDataWithServiceAccount(SHEET_ID, 'Requests');
     const ticketId = '#' + ticketNum;
     
     for (let i = 1; i < data.length; i++) {
@@ -667,7 +663,10 @@ function addTicketNote(ticketNum, noteText, staffEmail) {
         
         const currentNotes = data[i][16] || '';
         const newNote = `[${now}] ${staffName}: ${noteText}`;
-        sheet.getRange(rowIndex, 17).setValue(currentNotes ? currentNotes + '\n' + newNote : newNote);
+        const updatedNotes = currentNotes ? currentNotes + '\n' + newNote : newNote;
+        
+        // Update notes column (Q = column 17) using service account
+        updateCellWithServiceAccount(SHEET_ID, 'Requests', rowIndex, 17, updatedNotes);
         
         logInteraction('NOTE_ADDED', staffEmail, ticketId, noteText, true, '');
         
@@ -687,8 +686,8 @@ function addTicketNote(ticketNum, noteText, staffEmail) {
 
 function updateTicketStatus(ticketNum, newStatus, staffEmail) {
   try {
-    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Requests');
-    const data = sheet.getDataRange().getValues();
+    // Use service account for Sheet access
+    const data = getSheetDataWithServiceAccount(SHEET_ID, 'Requests');
     const ticketId = '#' + ticketNum;
     
     for (let i = 1; i < data.length; i++) {
@@ -697,11 +696,13 @@ function updateTicketStatus(ticketNum, newStatus, staffEmail) {
         const staffName = SUPPORT_STAFF.find(s => s.email === staffEmail)?.name || 'Staff';
         const now = new Date().toLocaleString('en-GB');
         
-        sheet.getRange(rowIndex, 18).setValue(newStatus);
+        // Update status column (R = column 18) using service account
+        updateCellWithServiceAccount(SHEET_ID, 'Requests', rowIndex, 18, newStatus);
         
         const currentNotes = data[i][16] || '';
         const newNote = `[${now}] ${staffName}: Status → ${newStatus}`;
-        sheet.getRange(rowIndex, 17).setValue(currentNotes ? currentNotes + '\n' + newNote : newNote);
+        const updatedNotes = currentNotes ? currentNotes + '\n' + newNote : newNote;
+        updateCellWithServiceAccount(SHEET_ID, 'Requests', rowIndex, 17, updatedNotes);
         
         const userEmail = data[i][8];
         if (userEmail) sendStatusUpdateEmail(userEmail, ticketId, newStatus, staffName, data[i][4]);

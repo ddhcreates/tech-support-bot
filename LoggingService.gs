@@ -10,27 +10,19 @@
  */
 function logInteraction(type, userEmail, input, output, success, details) {
   try {
-    const ss = SpreadsheetApp.openById(SHEET_ID);
-    let logSheet = ss.getSheetByName('ChatLogs');
-    
-    if (!logSheet) {
-      logSheet = ss.insertSheet('ChatLogs');
-      logSheet.getRange(1, 1, 1, 8).setValues([
-        ['Timestamp', 'Type', 'User', 'Input', 'Output', 'Success', 'Details', 'Error']
-      ]);
-      logSheet.setFrozenRows(1);
-    }
-    
-    logSheet.appendRow([
+    // Use service account for Sheet access
+    const rowData = [
       new Date().toISOString(),
       type,
       userEmail,
-      (input || '').substring(0, 500),
-      (output || '').substring(0, 500),
+      String(input || '').substring(0, 500),
+      String(output || '').substring(0, 500),
       success ? 'SUCCESS' : 'FAILURE',
-      (details || '').substring(0, 500),
+      String(details || '').substring(0, 500),
       ''
-    ]);
+    ];
+    
+    appendRowWithServiceAccount(SHEET_ID, 'ChatLogs', rowData);
     
   } catch (e) {
     console.error('logInteraction failed:', e);
@@ -42,17 +34,8 @@ function logInteraction(type, userEmail, input, output, success, details) {
  */
 function logErrorWithDetails(functionName, error, userEmail, additionalInfo) {
   try {
-    const ss = SpreadsheetApp.openById(SHEET_ID);
-    let logSheet = ss.getSheetByName('ChatLogs');
-    
-    if (!logSheet) {
-      logSheet = ss.insertSheet('ChatLogs');
-      logSheet.getRange(1, 1, 1, 8).setValues([
-        ['Timestamp', 'Type', 'User', 'Input', 'Output', 'Success', 'Details', 'Error']
-      ]);
-    }
-    
-    logSheet.appendRow([
+    // Use service account for Sheet access
+    const rowData = [
       new Date().toISOString(),
       'ERROR',
       userEmail || 'unknown',
@@ -61,7 +44,9 @@ function logErrorWithDetails(functionName, error, userEmail, additionalInfo) {
       'FAILURE',
       JSON.stringify(additionalInfo || {}).substring(0, 500),
       error.toString().substring(0, 500)
-    ]);
+    ];
+    
+    appendRowWithServiceAccount(SHEET_ID, 'ChatLogs', rowData);
     
   } catch (e) {
     console.error('logErrorWithDetails failed:', e);

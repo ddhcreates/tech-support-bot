@@ -51,15 +51,15 @@ function getAvailableStaffForToday() {
     const today = new Date();
     const dayName = today.toLocaleDateString('en-US', { weekday: 'long' });
     
-    const ss = SpreadsheetApp.openById(SHEET_ID);
-    let scheduleSheet = ss.getSheetByName('Schedule');
-    
-    if (!scheduleSheet) {
-      initializeScheduleSheets();
-      scheduleSheet = ss.getSheetByName('Schedule');
+    // Use service account for Sheet access
+    let data;
+    try {
+      data = getSheetDataWithServiceAccount(SHEET_ID, 'Schedule');
+    } catch (e) {
+      // Schedule sheet might not exist, use defaults
+      return { availableStaff: ASSIGNABLE_STAFF.map(s => ({ email: s.email, name: s.name })), lastAssignedIndex: 0, scheduleRowIndex: -1, dayName };
     }
     
-    const data = scheduleSheet.getDataRange().getValues();
     let scheduledStaff = [];
     let lastAssignedIndex = 0;
     let scheduleRowIndex = -1;
@@ -83,9 +83,8 @@ function getAvailableStaffForToday() {
     }
     
     // Filter out staff on leave
-    const leaveSheet = ss.getSheetByName('Leave');
-    if (leaveSheet) {
-      const leaveData = leaveSheet.getDataRange().getValues();
+    try {
+      const leaveData = getSheetDataWithServiceAccount(SHEET_ID, 'Leave');
       const onLeave = [];
       
       for (let i = 1; i < leaveData.length; i++) {
@@ -99,6 +98,8 @@ function getAvailableStaffForToday() {
       }
       
       scheduledStaff = scheduledStaff.filter(s => !onLeave.includes(s.email.toLowerCase()));
+    } catch (e) {
+      // Leave sheet might not exist, continue without filtering
     }
     
     return { availableStaff: scheduledStaff, lastAssignedIndex, scheduleRowIndex, dayName };
@@ -145,14 +146,8 @@ function updateLastAssignedIndex(rowIndex, newIndex) {
       return;
     }
     
-    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Schedule');
-    if (!sheet) {
-      logError('updateLastAssignedIndex', new Error('Schedule sheet not found'), {});
-      return;
-    }
-    
-    // Column 8 = Last_Assigned_Index
-    sheet.getRange(rowIndex, 8).setValue(newIndex);
+    // Column 8 = Last_Assigned_Index, use service account
+    updateCellWithServiceAccount(SHEET_ID, 'Schedule', rowIndex, 8, newIndex);
     
     logInfo('updateLastAssignedIndex', 'Updated', { rowIndex, newIndex });
   } catch (e) {

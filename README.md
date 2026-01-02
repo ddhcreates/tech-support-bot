@@ -49,7 +49,29 @@ A Google Workspace Add-on that provides an IT helpdesk ticketing system via Goog
    - `SUPPORT_STAFF` - Your team members
    - `TICKET_TYPES` - Customize as needed
 
-### 4. Configure Script Properties
+### 4. Set Up Service Account (Required for User Access)
+
+The bot uses a service account so users don't need direct Sheet access:
+
+1. **Create Service Account:**
+   - GCP Console → IAM & Admin → Service Accounts
+   - Create: `tech-support-bot`
+   - Keys tab → Add Key → JSON → Download
+
+2. **Share Sheet with Service Account:**
+   - Copy service account email (e.g., `tech-support-bot@project.iam.gserviceaccount.com`)
+   - Share your Google Sheet with this email as **Editor**
+
+3. **Enable Google Sheets API:**
+   - GCP Console → APIs & Services → Enable APIs
+   - Search and enable **Google Sheets API**
+
+4. **Add OAuth2 Library to Apps Script:**
+   - Click **+** next to Libraries
+   - Enter: `1B7FSrk5Zi6L1rSxxTDgDEUsPzlukDsi4KGuTMorsTQHhGBzBkMun4iDF`
+   - Select latest version → Add
+
+### 5. Configure Script Properties
 
 In Apps Script → Project Settings → Script Properties, add:
 
@@ -57,8 +79,9 @@ In Apps Script → Project Settings → Script Properties, add:
 |----------|-------|
 | `GEMINI_API_KEY` | Your Gemini API key |
 | `SPACE_WEBHOOK_URL` | Your Chat Space webhook URL |
+| `SERVICE_ACCOUNT_KEY` | Entire JSON content of service account key file |
 
-### 5. Deploy
+### 6. Deploy
 
 1. Deploy → New deployment → Add-on
 2. Copy Deployment ID
@@ -74,6 +97,7 @@ template/
 ├── ScheduleManager.gs   # Staff scheduling
 ├── NotificationService.gs # Emails and webhooks
 ├── LoggingService.gs    # Audit logging
+├── SheetService.gs      # Service account authentication (NEW)
 └── appsscript.json      # Manifest
 ```
 
@@ -146,6 +170,7 @@ Edit `DEFAULT_WEEKLY_SCHEDULE` in `Code.gs`.
 
 Run in Apps Script:
 
+- `testServiceAccountAccess()` - Test service account connection
 - `testGeminiDirectly()` - Test Gemini API
 - `testEmailSending()` - Test email delivery
 - `testRotation()` - Debug assignment rotation
@@ -157,8 +182,10 @@ Run in Apps Script:
 |-------|----------|
 | Bot not responding | Check Deployment ID in GCP |
 | Users must "Configure" | Normal for Add-ons (one-time per user) |
+| "Permission denied" for Sheet | Set up service account (see Step 4) |
 | All tickets to one person | Run `resetScheduleSheet()` |
 | Emails not sending | Check OAuth scopes in manifest |
+| Service account error | Enable Google Sheets API in GCP |
 
 ## 📝 License
 

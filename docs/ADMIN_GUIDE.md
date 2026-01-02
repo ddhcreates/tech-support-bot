@@ -210,6 +210,7 @@ Access: Apps Script → Project Settings → Script Properties
 |----------|-------------|-------|
 | `GEMINI_API_KEY` | Gemini AI API key | ict.facilitator |
 | `SPACE_WEBHOOK_URL` | Optional webhook override | - |
+| `SERVICE_ACCOUNT_KEY` | JSON content of service account key | ict.facilitator |
 
 ### OAuth Scopes (appsscript.json)
 
@@ -223,6 +224,19 @@ Access: Apps Script → Project Settings → Script Properties
   ]
 }
 ```
+
+### Service Account (for User Access)
+
+The bot uses a service account so regular users don't need Sheet access:
+
+| Step | Action |
+|------|--------|
+| 1 | GCP → IAM & Admin → Service Accounts → Create `tech-support-bot` |
+| 2 | Keys tab → Add Key → JSON → Download |
+| 3 | Share Google Sheet with service account email as Editor |
+| 4 | Enable Google Sheets API in GCP |
+| 5 | Add `SERVICE_ACCOUNT_KEY` to Script Properties (paste entire JSON) |
+| 6 | Add OAuth2 Library: `1B7FSrk5Zi6L1rSxxTDgDEUsPzlukDsi4KGuTMorsTQHhGBzBkMun4iDF` |
 
 ---
 
